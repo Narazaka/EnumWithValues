@@ -12,6 +12,7 @@ namespace EnumWithValues {
     [Generator]
     public class SourceGenerator : ISourceGenerator {
         const string AttributeClassesSource = @"
+#nullable enable
 using System;
 
 namespace EnumWithValues {
@@ -31,6 +32,7 @@ namespace EnumWithValues {
         public EnumValueAttribute(params object?[] value) => Value = value;
     }
 }
+#nullable disable
 ";
 
         public void Initialize(GeneratorInitializationContext context) {
