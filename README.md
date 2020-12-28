@@ -7,6 +7,12 @@ C# enum(like) with non-integer type casts (by source generator)
 It is difficult to handle enums in relation to non-integer types, but there is a classic workaround that makes handling them convenient by pseudo-handling them with structs.
 EnumWithValues uses a source generator to make this workaround convenient and fast to use.
 
+## Install
+
+EnumWithValues can be installed and used from [nuget](https://www.nuget.org/packages/EnumWithValues/).
+
+Because EnumWithValues uses a source generator, **you need to restart Visual Studio once after installation.**
+
 ## Usage
 
 Use `[EnumWithValues(structName)]` and `[EnumValue(params string[] values)]` attribute like below.
