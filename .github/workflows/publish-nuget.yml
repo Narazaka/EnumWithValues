@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Publish Nuget
 
 # Controls when the action will run. 
 on:
@@ -26,4 +26,4 @@ jobs:
           PROJECT_FILE_PATH: EnumWithValues/EnumWithValues.csproj
           GITHUB_USER: Narazaka
           NUGET_KEY: ${{secrets.NUGET_API_KEY}}
-          NUGET_SOURCE: https://nuget.pkg.github.com/
+          NUGET_SOURCE: https://nuget.pkg.github.com/Narazaka/EnumWithValues
