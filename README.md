@@ -113,20 +113,6 @@ These limitations are caused by the fact that I don't know much about code scann
 
 Pull Request welcome !!!
 
-### enum values
-
-EnumWithValues detects simple constant numeric value only.
-
-```csharp
-[EnumWithValues("Foo")]
-public enum FooEnum : long {
-    [EnumValue("OK")]
-    OK = -200L, // OK
-    [EnumValue("No Content")]
-    No_Content = 200 + 4, // NG
-}
-```
-
 ### enum type
 
 ulong enum value > long not supported.
