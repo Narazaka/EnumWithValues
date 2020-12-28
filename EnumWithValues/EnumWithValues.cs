@@ -72,7 +72,16 @@ namespace EnumWithValues {
                     .FirstOrDefault();
                 if (name is null)
                     continue;
-                var enumDeclaration = new EnumDeclaration() { Accessibility = symbol.DeclaredAccessibility, EnumName = symbol.Name, EnumFullname = symbol.ToString(), StructName = name, DefaultNumberConvert = defaultNumberConvert };
+                var enumDeclaration = new EnumDeclaration() {
+                    Accessibility = symbol.DeclaredAccessibility,
+                    EnumType = GetEnumValueTypeString(syntax),
+                    EnumName = symbol.Name,
+                    EnumFullname = symbol.ToString(),
+                    StructName = name,
+                    DefaultNumberConvert = defaultNumberConvert,
+                };
+                // roslyn cannot detect value...?
+                long enumValue = 0; // TODO: ulong
                 foreach (var memberSyntax in syntax.Members) {
                     var memberModel = compilation.GetSemanticModel(memberSyntax.SyntaxTree);
                     var memberSymbol = ModelExtensions.GetDeclaredSymbol(memberModel, memberSyntax)!;
@@ -81,21 +90,71 @@ namespace EnumWithValues {
                         .Where(attr => attr.AttributeClass!.Equals(enumValueAttributeSymbol, SymbolEqualityComparer.Default))
                         .Select(attr => attr.ConstructorArguments[0].Values!)
                         .FirstOrDefault();
-                    enumDeclaration.Members.Add(new() { Name = memberSymbol.Name, Values = valueConstants });
+                    if (memberSyntax.EqualsValue is EqualsValueClauseSyntax equalsValue) {
+                        enumValue = GetEqualsValue(equalsValue.Value) ?? enumValue;
+                    }
+                    enumDeclaration.Members.Add(new() { EnumName = symbol.Name, Name = memberSymbol.Name, EnumValue = enumValue, Values = valueConstants });
+                    ++enumValue;
                 }
                 enums.Add(enumDeclaration);
             }
             foreach (var e in enums) {
                 e.DetectTypes();
-                var code = StructCode(e.Accessibility, e.StructName, e.EnumName, e.Types ?? new(), e.Members);
+                var code = StructCode(e);
                 if (e.Namespace is string ns)
                     code = Namespaced(ns, code);
                 context.AddSource($"{e.StructFullname}.cs", SourceText.From(code, Encoding.UTF8));
             }
         }
 
+        string GetEnumValueTypeString(EnumDeclarationSyntax syntax) {
+            if (syntax.BaseList is not BaseListSyntax baseList) {
+                return "int";
+            }
+            var type = baseList.Types.First().Type.ToString();
+            switch (type.Replace("System.", "")) {
+                case "Byte": return "byte";
+                case "SByte": return "sbyte";
+                case "Int16": return "short";
+                case "UInt16": return "ushort";
+                case "Int32": return "int";
+                case "UInt32": return "uint";
+                case "Int64": return "long";
+                case "UInt64": return "ulong";
+            }
+            return type;
+        }
+
+        long? GetEqualsValue(ExpressionSyntax value) {
+            switch (value) {
+                case PrefixUnaryExpressionSyntax prefixed when prefixed.Kind() == SyntaxKind.UnaryMinusExpression:
+                    if (prefixed.Operand is LiteralExpressionSyntax valueLiteral1 && valueLiteral1.Token.Kind() == SyntaxKind.NumericLiteralToken) {
+                        return -GetNumericObjectValue(valueLiteral1.Token.Value!);
+                        }
+                    break;
+                case LiteralExpressionSyntax valueLiteral2 when valueLiteral2.Token.Kind() == SyntaxKind.NumericLiteralToken:
+                    return GetNumericObjectValue(valueLiteral2.Token.Value!);
+            }
+            return null;
+        }
+
+        long GetNumericObjectValue(object value) {
+            switch (value) {
+                case byte casted: return casted;
+                case sbyte casted: return casted;
+                case ushort casted: return casted;
+                case short casted: return casted;
+                case uint casted: return casted;
+                case int casted: return casted;
+                case ulong casted: return (long)casted;
+                case long casted: return casted;
+                default: throw new InvalidCastException();
+            }
+        }
+
         class EnumDeclaration {
             public Accessibility Accessibility { get; set; }
+            public string EnumType { get; set; } = "";
             public string EnumFullname { get; set; } = "";
             public string EnumName { get; set; } = "";
             public string? Namespace { get => EnumFullname == EnumName ? null : EnumFullname.Substring(0, EnumFullname.Length - EnumName.Length - 1); }
@@ -103,7 +162,7 @@ namespace EnumWithValues {
             public string StructFullname { get => $"{Namespace}_{StructName}"; }
             public bool DefaultNumberConvert { get; set; }
             public List<EnumMember> Members { get; set; } = new();
-            public List<ITypeSymbol>? Types { get; set; }
+            public List<string>? Types { get; set; }
             public void DetectTypes() {
                 if (Members.Count == 0) {
                     Types = new();
@@ -117,13 +176,39 @@ namespace EnumWithValues {
                         return;
                     }
                 }
-                Types = types;
+                Types = types.Select(type => type.ToString()).ToList();
+            }
+            public string Type(int index) {
+                switch (index) {
+                    case -2:
+                        return EnumType;
+                    case -1:
+                        return EnumName;
+                    default:
+                        return Types![index];
+                }
+            }
+
+            public IEnumerable<int> TypeIndexes {
+                get => Enumerable.Range(DefaultNumberConvert ? -2 : -1, (Types is null ? 0 : Types.Count) + (DefaultNumberConvert ? 2 : 1));
             }
         }
 
         class EnumMember {
+            public string EnumName { get; set; } = "";
             public string Name { get; set; } = "";
-            public ImmutableArray<TypedConstant> Values { get; set; } = new();
+            public long EnumValue { get; set; }
+            public IList<TypedConstant> Values { get; set; } = new List<TypedConstant>();
+            public string CSharpValue(int index) {
+                switch (index) {
+                    case -2:
+                        return EnumValue.ToString();
+                    case -1:
+                        return $"{EnumName}.{Name}";
+                    default:
+                        return Values[index].ToCSharpString();
+                }
+            }
         }
 
         const string I = "    ";
@@ -141,12 +226,14 @@ namespace {namespaceName} {{
         string AccessibilityToString(Accessibility accessibility) =>
             string.Join(" ", accessibility.ToString().Split(new string[] { "And" }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.ToLower()));
 
-        string StructCode(Accessibility accessibility, string structName, string enumName, IList<ITypeSymbol> valueTypes, IEnumerable<EnumMember> members) {
+        string StructCode(EnumDeclaration declaration) {
+            var structName = declaration.StructName;
+            var enumName = declaration.EnumName;
             return $@"
     using System;
 
-    {AccessibilityToString(accessibility)} struct {structName} : IEquatable<{structName}> {{
-{FieldCode(structName, enumName, members)}
+    {AccessibilityToString(declaration.Accessibility)} struct {structName} : IEquatable<{structName}> {{
+{FieldCode(structName, enumName, declaration.Members)}
 
         public {enumName} Enum {{ get; }}
 
@@ -154,7 +241,7 @@ namespace {namespaceName} {{
 
         public bool Equals({structName} other) => Enum == other.Enum;
 
-{ValueOperatorCode(structName, enumName, valueTypes, members)}
+{ValueOperatorCode(declaration)}
     }}
 ";
         }
@@ -166,31 +253,32 @@ namespace {namespaceName} {{
             return code.ToString();
         }
 
-        string ValueOperatorCode(string structName, string enumName, IList<ITypeSymbol> valueTypes, IEnumerable<EnumMember> members) {
+        string ValueOperatorCode(EnumDeclaration declaration) {
+            // (string structName, string enumName, IList<string> valueTypes, IEnumerable<EnumMember> members
             var code = new StringBuilder();
-            for (var i = 0; i < valueTypes.Count; ++i) {
-                ToValueOperatorCode(code, structName, enumName, valueTypes, members, i);
-                FromValueOperatorCode(code, structName, enumName, valueTypes, members, i);
+            foreach (var i in declaration.TypeIndexes) {
+                ToValueOperatorCode(code, i, declaration);
+                FromValueOperatorCode(code, i, declaration);
             }
             return code.ToString();
         }
 
-        StringBuilder ToValueOperatorCode(StringBuilder code, string structName, string enumName, IList<ITypeSymbol> valueTypes, IEnumerable<EnumMember> members, int valueIndex) {
-            code.Append($"{I}{I}public static implicit operator {valueTypes[valueIndex]}({structName} enumStruct) {{").AppendLine();
+        StringBuilder ToValueOperatorCode(StringBuilder code, int valueIndex, EnumDeclaration declaration) {
+            code.Append($"{I}{I}public static implicit operator {declaration.Type(valueIndex)}({declaration.StructName} enumStruct) {{").AppendLine();
             code.Append($"{I}{I}{I}switch (enumStruct.Enum) {{").AppendLine();
-            foreach (var member in members)
-                code.Append($"{I}{I}{I}{I}case {enumName}.{member.Name}: return {member.Values[valueIndex].ToCSharpString()};").AppendLine();
+            foreach (var member in declaration.Members)
+                code.Append($"{I}{I}{I}{I}case {declaration.EnumName}.{member.Name}: return {member.CSharpValue(valueIndex)};").AppendLine();
             code.Append($"{I}{I}{I}{I}default: throw new InvalidCastException();").AppendLine();
             code.Append($"{I}{I}{I}}}").AppendLine();
             code.Append($"{I}{I}}}").AppendLine();
             return code;
         }
 
-        StringBuilder FromValueOperatorCode(StringBuilder code, string structName, string enumName, IList<ITypeSymbol> valueTypes, IEnumerable<EnumMember> members, int valueIndex) {
-            code.Append($"{I}{I}public static implicit operator {structName}({valueTypes[valueIndex]} value) {{").AppendLine();
+        StringBuilder FromValueOperatorCode(StringBuilder code, int valueIndex, EnumDeclaration declaration) {
+            code.Append($"{I}{I}public static implicit operator {declaration.StructName}({declaration.Type(valueIndex)} value) {{").AppendLine();
             code.Append($"{I}{I}{I}switch (value) {{").AppendLine();
-            foreach (var member in members)
-                code.Append($"{I}{I}{I}{I}case {member.Values[valueIndex].ToCSharpString()}: return {member.Name};").AppendLine();
+            foreach (var member in declaration.Members)
+                code.Append($"{I}{I}{I}{I}case {member.CSharpValue(valueIndex)}: return {member.Name};").AppendLine();
             code.Append($"{I}{I}{I}{I}default: throw new InvalidCastException();").AppendLine();
             code.Append($"{I}{I}{I}}}").AppendLine();
             code.Append($"{I}{I}}}").AppendLine();
