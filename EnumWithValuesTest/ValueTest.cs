@@ -2,7 +2,7 @@
 using EnumWithValues;
 
 namespace ValueTestNS {
-    [EnumWithValues("DefaultValueTest")]
+    [EnumWithValues("DefaultValueTest", false)]
     enum DefaultValueTestEnum {
         [EnumValue("FOO", 1)]
         Foo,

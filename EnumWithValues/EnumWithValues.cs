@@ -19,11 +19,11 @@ namespace EnumWithValues {
     [AttributeUsage(AttributeTargets.Enum)]
     public class EnumWithValuesAttribute : Attribute {
         public string Name { get; }
-        public bool DefaultNumberConvert { get; }
+        public bool ConvertEnumValue { get; }
         public bool ThrowIfCastFails { get; }
-        public EnumWithValuesAttribute(string name, bool defaultNumberConvert = false, bool throwIfCastFails = false) {
+        public EnumWithValuesAttribute(string name, bool convertEnumValue = true, bool throwIfCastFails = false) {
             Name = name;
-            DefaultNumberConvert = defaultNumberConvert;
+            ConvertEnumValue = convertEnumValue;
             ThrowIfCastFails = throwIfCastFails;
         }
     }
@@ -68,7 +68,7 @@ namespace EnumWithValues {
                 var model = compilation.GetSemanticModel(syntax.SyntaxTree);
                 var symbol = ModelExtensions.GetDeclaredSymbol(model, syntax)!;
                 var attrs = symbol.GetAttributes();
-                var (name, defaultNumberConvert, throwIfCastFails) = attrs
+                var (name, convertEnumValue, throwIfCastFails) = attrs
                     .Where(attr => attr.AttributeClass!.Equals(enumWithValuesAttributeSymbol, SymbolEqualityComparer.Default))
                     .Select(attr => (
                         (string)attr.ConstructorArguments[0].Value!,
@@ -84,7 +84,7 @@ namespace EnumWithValues {
                     EnumName = symbol.Name,
                     EnumFullname = symbol.ToString(),
                     StructName = name,
-                    DefaultNumberConvert = defaultNumberConvert,
+                    ConvertEnumValue = convertEnumValue,
                     ThrowIfCastFails = throwIfCastFails,
                 };
                 // roslyn cannot detect value...?
@@ -168,7 +168,7 @@ namespace EnumWithValues {
             public string? Namespace { get => EnumFullname == EnumName ? null : EnumFullname.Substring(0, EnumFullname.Length - EnumName.Length - 1); }
             public string StructName { get; set; } = "";
             public string StructFullname { get => $"{Namespace}_{StructName}"; }
-            public bool DefaultNumberConvert { get; set; }
+            public bool ConvertEnumValue { get; set; }
             public bool ThrowIfCastFails { get; set; }
             public List<EnumMember> Members { get; set; } = new();
             public List<string>? Types { get; set; }
@@ -199,7 +199,7 @@ namespace EnumWithValues {
             }
 
             public IEnumerable<int> TypeIndexes {
-                get => Enumerable.Range(DefaultNumberConvert ? -2 : -1, (Types is null ? 0 : Types.Count) + (DefaultNumberConvert ? 2 : 1));
+                get => Enumerable.Range(ConvertEnumValue ? -2 : -1, (Types is null ? 0 : Types.Count) + (ConvertEnumValue ? 2 : 1));
             }
         }
 
