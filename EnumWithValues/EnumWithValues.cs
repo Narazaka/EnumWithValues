@@ -20,9 +20,11 @@ namespace EnumWithValues {
     public class EnumWithValuesAttribute : Attribute {
         public string Name { get; }
         public bool DefaultNumberConvert { get; }
-        public EnumWithValuesAttribute(string name, bool defaultNumberConvert = false) {
+        public bool ThrowIfCastFails { get; }
+        public EnumWithValuesAttribute(string name, bool defaultNumberConvert = false, bool throwIfCastFails = false) {
             Name = name;
             DefaultNumberConvert = defaultNumberConvert;
+            ThrowIfCastFails = throwIfCastFails;
         }
     }
 
@@ -66,9 +68,13 @@ namespace EnumWithValues {
                 var model = compilation.GetSemanticModel(syntax.SyntaxTree);
                 var symbol = ModelExtensions.GetDeclaredSymbol(model, syntax)!;
                 var attrs = symbol.GetAttributes();
-                var (name, defaultNumberConvert) = attrs
+                var (name, defaultNumberConvert, throwIfCastFails) = attrs
                     .Where(attr => attr.AttributeClass!.Equals(enumWithValuesAttributeSymbol, SymbolEqualityComparer.Default))
-                    .Select(attr => ((string)attr.ConstructorArguments[0].Value!, (bool)attr.ConstructorArguments[1].Value!))
+                    .Select(attr => (
+                        (string)attr.ConstructorArguments[0].Value!,
+                        (bool)attr.ConstructorArguments[1].Value!,
+                        (bool)attr.ConstructorArguments[2].Value!
+                        ))
                     .FirstOrDefault();
                 if (name is null)
                     continue;
@@ -79,6 +85,7 @@ namespace EnumWithValues {
                     EnumFullname = symbol.ToString(),
                     StructName = name,
                     DefaultNumberConvert = defaultNumberConvert,
+                    ThrowIfCastFails = throwIfCastFails,
                 };
                 // roslyn cannot detect value...?
                 long enumValue = 0; // TODO: ulong
@@ -86,14 +93,15 @@ namespace EnumWithValues {
                     var memberModel = compilation.GetSemanticModel(memberSyntax.SyntaxTree);
                     var memberSymbol = ModelExtensions.GetDeclaredSymbol(memberModel, memberSyntax)!;
                     var memberAttrs = memberSymbol.GetAttributes();
-                    var valueConstants = memberAttrs
+                    ImmutableArray<TypedConstant>? valueConstants = memberAttrs.Length == 0 ? null : memberAttrs
                         .Where(attr => attr.AttributeClass!.Equals(enumValueAttributeSymbol, SymbolEqualityComparer.Default))
                         .Select(attr => attr.ConstructorArguments[0].Values!)
                         .FirstOrDefault();
                     if (memberSyntax.EqualsValue is EqualsValueClauseSyntax equalsValue) {
                         enumValue = GetEqualsValue(equalsValue.Value) ?? enumValue;
                     }
-                    enumDeclaration.Members.Add(new() { EnumName = symbol.Name, Name = memberSymbol.Name, EnumValue = enumValue, Values = valueConstants });
+                    if (valueConstants is not null)
+                        enumDeclaration.Members.Add(new() { EnumName = symbol.Name, Name = memberSymbol.Name, EnumValue = enumValue, Values = valueConstants });
                     ++enumValue;
                 }
                 enums.Add(enumDeclaration);
@@ -161,6 +169,7 @@ namespace EnumWithValues {
             public string StructName { get; set; } = "";
             public string StructFullname { get => $"{Namespace}_{StructName}"; }
             public bool DefaultNumberConvert { get; set; }
+            public bool ThrowIfCastFails { get; set; }
             public List<EnumMember> Members { get; set; } = new();
             public List<string>? Types { get; set; }
             public void DetectTypes() {
@@ -240,6 +249,10 @@ namespace {namespaceName} {{
         {structName}({enumName} @enum) => Enum = @enum;
 
         public bool Equals({structName} other) => Enum == other.Enum;
+        public static bool operator ==({structName} a, {structName} b) => a.Equals(b);
+        public static bool operator !=({structName} a, {structName} b) => !a.Equals(b);
+        public override bool Equals(object obj) => obj is {structName} && Equals(obj);
+        public override int GetHashCode() => (int)Enum;
 
 {ValueOperatorCode(declaration)}
     }}
@@ -268,7 +281,11 @@ namespace {namespaceName} {{
             code.Append($"{I}{I}{I}switch (enumStruct.Enum) {{").AppendLine();
             foreach (var member in declaration.Members)
                 code.Append($"{I}{I}{I}{I}case {declaration.EnumName}.{member.Name}: return {member.CSharpValue(valueIndex)};").AppendLine();
-            code.Append($"{I}{I}{I}{I}default: throw new InvalidCastException();").AppendLine();
+            if (declaration.ThrowIfCastFails) {
+                code.Append($"{I}{I}{I}{I}default: throw new InvalidCastException();").AppendLine();
+            } else {
+                code.Append($"{I}{I}{I}{I}default: return default;").AppendLine();
+            }
             code.Append($"{I}{I}{I}}}").AppendLine();
             code.Append($"{I}{I}}}").AppendLine();
             return code;
@@ -279,7 +296,11 @@ namespace {namespaceName} {{
             code.Append($"{I}{I}{I}switch (value) {{").AppendLine();
             foreach (var member in declaration.Members)
                 code.Append($"{I}{I}{I}{I}case {member.CSharpValue(valueIndex)}: return {member.Name};").AppendLine();
-            code.Append($"{I}{I}{I}{I}default: throw new InvalidCastException();").AppendLine();
+            if (declaration.ThrowIfCastFails) {
+                code.Append($"{I}{I}{I}{I}default: throw new InvalidCastException();").AppendLine();
+            } else {
+                code.Append($"{I}{I}{I}{I}default: return default;").AppendLine();
+            }
             code.Append($"{I}{I}{I}}}").AppendLine();
             code.Append($"{I}{I}}}").AppendLine();
             return code;
