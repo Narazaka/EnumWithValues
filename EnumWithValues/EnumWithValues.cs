@@ -244,15 +244,17 @@ namespace {namespaceName} {{
     {AccessibilityToString(declaration.Accessibility)} struct {structName} : IEquatable<{structName}> {{
 {FieldCode(structName, enumName, declaration.Members)}
 
-        public {enumName} Enum {{ get; }}
+{EnumConstCode(declaration)}
 
-        {structName}({enumName} @enum) => Enum = @enum;
+        public {enumName} AsEnum {{ get; }}
 
-        public bool Equals({structName} other) => Enum == other.Enum;
+        {structName}({enumName} asEnum) => AsEnum = asEnum;
+
+        public bool Equals({structName} other) => AsEnum == other.AsEnum;
         public static bool operator ==({structName} a, {structName} b) => a.Equals(b);
         public static bool operator !=({structName} a, {structName} b) => !a.Equals(b);
         public override bool Equals(object obj) => obj is {structName} && Equals(obj);
-        public override int GetHashCode() => (int)Enum;
+        public override int GetHashCode() => (int)AsEnum;
 
 {ValueOperatorCode(declaration)}
     }}
@@ -264,6 +266,16 @@ namespace {namespaceName} {{
             foreach (var member in members)
                 code.Append($"{I}{I}public static readonly {structName} {member.Name} = new({enumName}.{member.Name});").AppendLine();
             return code.ToString();
+        }
+
+        string EnumConstCode(EnumDeclaration declaration) {
+            var code = new StringBuilder();
+            code.Append($"{I}{I}public static class Enum {{");
+            foreach (var member in declaration.Members)
+                code.Append($"{I}{I}{I}public const {declaration.EnumName} {member.Name} = {declaration.EnumName}.{member.Name};").AppendLine();
+            code.Append("}");
+            return code.ToString();
+
         }
 
         string ValueOperatorCode(EnumDeclaration declaration) {
@@ -278,7 +290,7 @@ namespace {namespaceName} {{
 
         StringBuilder ToValueOperatorCode(StringBuilder code, int valueIndex, EnumDeclaration declaration) {
             code.Append($"{I}{I}public static implicit operator {declaration.Type(valueIndex)}({declaration.StructName} enumStruct) {{").AppendLine();
-            code.Append($"{I}{I}{I}switch (enumStruct.Enum) {{").AppendLine();
+            code.Append($"{I}{I}{I}switch (enumStruct.AsEnum) {{").AppendLine();
             foreach (var member in declaration.Members)
                 code.Append($"{I}{I}{I}{I}case {declaration.EnumName}.{member.Name}: return {member.CSharpValue(valueIndex)};").AppendLine();
             if (declaration.ThrowIfCastFails) {

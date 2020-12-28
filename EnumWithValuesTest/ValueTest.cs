@@ -61,9 +61,20 @@ namespace ValueTestNS {
             Assert.IsTrue(DefaultValueTest.Bar != 0);
             Assert.IsTrue(DefaultValueTest.Foo == "");
             Assert.IsTrue(DefaultValueTest.Bar != "");
-            Assert.IsTrue(0 == ((DefaultValueTest)0).Enum);
+            Assert.IsTrue(0 == ((DefaultValueTest)0).AsEnum);
             Assert.IsTrue(DefaultValueTest.Foo == DefaultValueTestEnum.Baz);
             Assert.IsTrue(DefaultValueTest.Bar != DefaultValueTestEnum.Baz);
+        }
+
+        [TestMethod]
+        public void SwitchTest() {
+            var a = 0;
+            switch (DefaultValueTest.Foo.AsEnum) {
+                case DefaultValueTest.Enum.Foo:
+                    a = 1;
+                    break;
+            }
+            Assert.IsTrue(a == 1);
         }
 
         [TestMethod]

@@ -15,7 +15,7 @@ namespace Ns1 {
         [TestMethod]
         public void Initialize() {
             Assert.IsTrue(NamespacedMyEnumStruct.Foo == "FOO");
-            Assert.AreEqual(NamespacedMyEnumStruct.Bar.Enum, NamespacedMyEnumNs.Bar);
+            Assert.AreEqual(NamespacedMyEnumStruct.Bar.AsEnum, NamespacedMyEnumNs.Bar);
         }
     }
 }
