@@ -4,11 +4,34 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
+    <PackageLicenseExpression>Zlib</PackageLicenseExpression>
+    <Authors>narazaka</Authors>
+    <PackageDescription>C# enum(like) with non-integer type casts (by source generator)</PackageDescription>
+    <Description>It is difficult to handle enums in relation to non-integer types, but there is a classic workaround that makes handling them convenient by pseudo-handling them with structs.
+EnumWithValues uses a source generator to make this workaround convenient and fast to use.</Description>
+    <PackageProjectUrl>https://github.com/Narazaka/EnumWithValues</PackageProjectUrl>
+    <RepositoryUrl>git@github.com:Narazaka/EnumWithValues.git</RepositoryUrl>
+    <PackageTags>enum;struct</PackageTags>
+    <PackageIcon>EnumWithValues.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.8.0-5.final" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.1" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.8.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\EnumWithValues.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\README.md">
+      <Pack>true</Pack>
+      <PackagePath></PackagePath>
+    </Content>
   </ItemGroup>
 
 </Project>
