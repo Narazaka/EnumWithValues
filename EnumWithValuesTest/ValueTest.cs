@@ -78,6 +78,11 @@ namespace ValueTestNS {
         }
 
         [TestMethod]
+        public void StringTest() {
+            Assert.AreEqual($"{DefaultValueTest.Foo}", "FOO");
+        }
+
+        [TestMethod]
         public void WithValue() {
             Assert.IsTrue(WithValueTest.Foo == WithValueTestEnum.Foo);
             Assert.IsTrue(WithValueTest.Foo == "FOO");

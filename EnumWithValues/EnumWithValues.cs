@@ -201,6 +201,10 @@ namespace EnumWithValues {
             public IEnumerable<int> TypeIndexes {
                 get => Enumerable.Range(ConvertEnumValue ? -2 : -1, (Types is null ? 0 : Types.Count) + (ConvertEnumValue ? 2 : 1));
             }
+
+            public bool HasStringType {
+                get => Types is not null && Types.Contains("string");
+            }
         }
 
         class EnumMember {
@@ -257,6 +261,8 @@ namespace {namespaceName} {{
         public override int GetHashCode() => (int)AsEnum;
 
 {ValueOperatorCode(declaration)}
+
+{ToStringCode(declaration)}
     }}
 ";
         }
@@ -270,12 +276,18 @@ namespace {namespaceName} {{
 
         string EnumConstCode(EnumDeclaration declaration) {
             var code = new StringBuilder();
-            code.Append($"{I}{I}public static class Enum {{");
+            code.Append($"{I}{I}public static class Enum {{").AppendLine();
             foreach (var member in declaration.Members)
                 code.Append($"{I}{I}{I}public const {declaration.EnumName} {member.Name} = {declaration.EnumName}.{member.Name};").AppendLine();
-            code.Append("}");
+            code.Append($"{I}{I}}}").AppendLine();
             return code.ToString();
 
+        }
+
+        string ToStringCode(EnumDeclaration declaration) {
+            if (!declaration.HasStringType)
+                return "";
+            return I + I + @"public override string ToString() => (string)this;";
         }
 
         string ValueOperatorCode(EnumDeclaration declaration) {
