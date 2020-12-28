@@ -13,6 +13,7 @@ EnumWithValues uses a source generator to make this workaround convenient and fa
     <RepositoryUrl>git@github.com:Narazaka/EnumWithValues.git</RepositoryUrl>
     <PackageTags>enum;struct</PackageTags>
     <PackageIcon>EnumWithValues.png</PackageIcon>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
