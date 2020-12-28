@@ -24,6 +24,4 @@ jobs:
         uses: Rebel028/publish-nuget@v2.6.0
         with:
           PROJECT_FILE_PATH: EnumWithValues/EnumWithValues.csproj
-          GITHUB_USER: Narazaka
           NUGET_KEY: ${{secrets.NUGET_API_KEY}}
-          NUGET_SOURCE: https://nuget.pkg.github.com/Narazaka/EnumWithValues
