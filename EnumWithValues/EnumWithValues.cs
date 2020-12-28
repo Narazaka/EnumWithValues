@@ -66,7 +66,7 @@ namespace EnumWithValues {
             var enums = new List<EnumDeclaration>();
             foreach (var syntax in receiver.EnumDeclarationSyntaxes) {
                 var model = compilation.GetSemanticModel(syntax.SyntaxTree);
-                var symbol = ModelExtensions.GetDeclaredSymbol(model, syntax)!;
+                var symbol = (ModelExtensions.GetDeclaredSymbol(model, syntax) as INamedTypeSymbol)!;
                 var attrs = symbol.GetAttributes();
                 var (name, convertEnumValue, throwIfCastFails) = attrs
                     .Where(attr => attr.AttributeClass!.Equals(enumWithValuesAttributeSymbol, SymbolEqualityComparer.Default))
@@ -87,22 +87,16 @@ namespace EnumWithValues {
                     ConvertEnumValue = convertEnumValue,
                     ThrowIfCastFails = throwIfCastFails,
                 };
-                // roslyn cannot detect value...?
-                long enumValue = 0; // TODO: ulong
                 foreach (var memberSyntax in syntax.Members) {
                     var memberModel = compilation.GetSemanticModel(memberSyntax.SyntaxTree);
-                    var memberSymbol = ModelExtensions.GetDeclaredSymbol(memberModel, memberSyntax)!;
+                    var memberSymbol = (ModelExtensions.GetDeclaredSymbol(memberModel, memberSyntax) as IFieldSymbol)!;
                     var memberAttrs = memberSymbol.GetAttributes();
                     ImmutableArray<TypedConstant>? valueConstants = memberAttrs.Length == 0 ? null : memberAttrs
                         .Where(attr => attr.AttributeClass!.Equals(enumValueAttributeSymbol, SymbolEqualityComparer.Default))
                         .Select(attr => attr.ConstructorArguments[0].Values!)
                         .FirstOrDefault();
-                    if (memberSyntax.EqualsValue is EqualsValueClauseSyntax equalsValue) {
-                        enumValue = GetEqualsValue(equalsValue.Value) ?? enumValue;
-                    }
                     if (valueConstants is not null)
-                        enumDeclaration.Members.Add(new() { EnumName = symbol.Name, Name = memberSymbol.Name, EnumValue = enumValue, Values = valueConstants });
-                    ++enumValue;
+                        enumDeclaration.Members.Add(new() { EnumName = symbol.Name, Name = memberSymbol.Name, EnumValue = GetNumericObjectValue(memberSymbol.ConstantValue), Values = valueConstants });
                 }
                 enums.Add(enumDeclaration);
             }
@@ -133,20 +127,7 @@ namespace EnumWithValues {
             return type;
         }
 
-        long? GetEqualsValue(ExpressionSyntax value) {
-            switch (value) {
-                case PrefixUnaryExpressionSyntax prefixed when prefixed.Kind() == SyntaxKind.UnaryMinusExpression:
-                    if (prefixed.Operand is LiteralExpressionSyntax valueLiteral1 && valueLiteral1.Token.Kind() == SyntaxKind.NumericLiteralToken) {
-                        return -GetNumericObjectValue(valueLiteral1.Token.Value!);
-                        }
-                    break;
-                case LiteralExpressionSyntax valueLiteral2 when valueLiteral2.Token.Kind() == SyntaxKind.NumericLiteralToken:
-                    return GetNumericObjectValue(valueLiteral2.Token.Value!);
-            }
-            return null;
-        }
-
-        long GetNumericObjectValue(object value) {
+        long GetNumericObjectValue(object? value) {
             switch (value) {
                 case byte casted: return casted;
                 case sbyte casted: return casted;
