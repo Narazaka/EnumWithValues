@@ -20,8 +20,8 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - name: Publish NuGet 2
-        uses: Rebel028/publish-nuget@v2.6.0
+      - name: Publish NuGet
+        uses: brandedoutcast/publish-nuget@v2.5.5
         with:
           PROJECT_FILE_PATH: EnumWithValues/EnumWithValues.csproj
           NUGET_KEY: ${{secrets.NUGET_API_KEY}}
