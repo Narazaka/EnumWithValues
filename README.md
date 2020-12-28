@@ -95,6 +95,18 @@ public enum FooEnum {
 }
 ```
 
+### switch
+
+Foo is an instance, while switch case only accepts const. Therefore, this workaround is necessary.
+
+```csharp
+var myEnum = MyEnum.Foo;
+switch (myEnum.AsEnum) {
+    case MyEnum.Enum.Foo:
+        return true;
+}
+```
+
 ## Limitations
 
 These limitations are caused by the fact that I don't know much about code scanning in Roslyn.
