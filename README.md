@@ -1,5 +1,8 @@
 # EnumWithValues
 
+![.NET](https://github.com/Narazaka/EnumWithValues/workflows/.NET/badge.svg)
+![Nuget](https://img.shields.io/nuget/v/EnumWithValues)
+
 C# enum(like) with non-integer type casts (by source generator)
 
 ## Concept
