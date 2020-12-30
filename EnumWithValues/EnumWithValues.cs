@@ -224,9 +224,10 @@ namespace {namespaceName} {{
             var structName = declaration.StructName;
             var enumName = declaration.EnumName;
             return $@"
+    #nullable enable
     using System;
 
-    {AccessibilityToString(declaration.Accessibility)} struct {structName} : IEquatable<{structName}> {{
+    {AccessibilityToString(declaration.Accessibility)} partial struct {structName} : IEquatable<{structName}> {{
 {FieldCode(structName, enumName, declaration.Members)}
 
 {EnumConstCode(declaration)}
@@ -238,9 +239,10 @@ namespace {namespaceName} {{
         public bool Equals({structName} other) => AsEnum == other.AsEnum;
         public static bool operator ==({structName} a, {structName} b) => a.Equals(b);
         public static bool operator !=({structName} a, {structName} b) => !a.Equals(b);
-        public override bool Equals(object obj) => obj is {structName} && Equals(obj);
+        public override bool Equals(object? obj) => obj is {structName} && Equals(obj);
         public override int GetHashCode() => (int)AsEnum;
 
+    #nullable disable
 {ValueOperatorCode(declaration)}
 
 {ToStringCode(declaration)}
