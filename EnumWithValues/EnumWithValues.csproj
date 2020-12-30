@@ -32,14 +32,14 @@ EnumWithValues uses a source generator to make this workaround convenient and fa
   <ItemGroup>
     <None Include="..\EnumWithValues.png">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="..\README.md">
       <Pack>true</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>\</PackagePath>
     </Content>
   </ItemGroup>
 
