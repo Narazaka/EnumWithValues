@@ -3,7 +3,11 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
 
+    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(ProjectDir)..\SourceGenerated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
